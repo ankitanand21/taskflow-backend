@@ -295,6 +295,14 @@
           "maximum": 100,
           "default": 20
         }
+      },
+      "JobId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
       }
     },
     "responses": {
@@ -1020,7 +1028,7 @@
         "summary": "Get background job status",
         "parameters": [
           {
-            "$ref": "#/components/parameters/Id"
+            "$ref": "#/components/parameters/JobId"
           }
         ],
         "responses": {
