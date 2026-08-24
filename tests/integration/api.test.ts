@@ -1,1 +1,10 @@
-import {describe,it,expect} from 'vitest';import request from 'supertest';import {app} from '../../src/app';describe('API integration smoke tests',()=>{it('health endpoint works',async()=>{const r=await request(app).get('/health');expect(r.status).toBe(200);expect(r.body.status).toBe('ok')})});
+import { describe, it, expect } from "vitest";
+import request from "supertest";
+import { app } from "../../src/app";
+describe("API integration smoke tests", () => {
+  it("health endpoint works", async () => {
+    const r = await request(app).get("/health");
+    expect(r.status).toBe(200);
+    expect(r.body.status).toBe("ok");
+  });
+});

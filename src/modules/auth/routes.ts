@@ -1,7 +1,149 @@
-import {Router} from 'express'; import bcrypt from 'bcryptjs'; import {z} from 'zod'; import {prisma} from '../../config/database'; import {access,refresh,verifyRefresh,hashToken} from '../../utils/jwt'; import {authRateLimit} from '../../middleware/rate'; import {AppError} from '../../utils/errors';
-const r=Router(); const creds=z.object({email:z.string().email(),password:z.string().min(8),name:z.string().min(2).optional(),organizationName:z.string().min(2).optional()});
-function tokens(userId:string,organizationId:string,role:any){return {accessToken:access({userId,organizationId,role}),refreshToken:refresh(userId)}}
-r.post('/register',authRateLimit,async(req,res,next)=>{try{const b=creds.parse(req.body);const exists=await prisma.user.findUnique({where:{email:b.email}});if(exists)throw new AppError(409,'EMAIL_EXISTS','Email already registered');const pw=await bcrypt.hash(b.password,12);const result=await prisma.$transaction(async tx=>{const u=await tx.user.create({data:{email:b.email,name:b.name??b.email.split('@')[0],passwordHash:pw}});const o=await tx.organization.create({data:{name:b.organizationName??`${u.name}'s Organization`}});await tx.orgMember.create({data:{userId:u.id,organizationId:o.id,role:'org_admin'}});return {u,o}});const t=tokens(result.u.id,result.o.id,'org_admin');await prisma.refreshToken.create({data:{userId:result.u.id,tokenHash:hashToken(t.refreshToken),expiresAt:new Date(Date.now()+7*86400000)}});res.status(201).json({user:{id:result.u.id,email:result.u.email,name:result.u.name},...t})}catch(e){next(e)}});
-r.post('/login',authRateLimit,async(req,res,next)=>{try{const b=creds.pick({email:true,password:true}).parse(req.body);const u=await prisma.user.findUnique({where:{email:b.email},include:{memberships:true}});if(!u||!(await bcrypt.compare(b.password,u.passwordHash)))throw new AppError(401,'INVALID_CREDENTIALS','Invalid email or password');const m=u.memberships[0];if(!m)throw new AppError(403,'NO_ORGANIZATION','User has no organization');const t=tokens(u.id,m.organizationId,m.role);await prisma.refreshToken.create({data:{userId:u.id,tokenHash:hashToken(t.refreshToken),expiresAt:new Date(Date.now()+7*86400000)}});res.json({user:{id:u.id,email:u.email,name:u.name,organizationId:m.organizationId,role:m.role},...t})}catch(e){next(e)}});
-r.post('/refresh',authRateLimit,async(req,res,next)=>{try{const rt=z.object({refreshToken:z.string()}).parse(req.body).refreshToken;const c=verifyRefresh(rt);const row=await prisma.refreshToken.findUnique({where:{tokenHash:hashToken(rt)},include:{user:{include:{memberships:true}}}});if(!row||row.revokedAt||row.expiresAt<new Date()||row.userId!==c.userId)throw new AppError(401,'INVALID_REFRESH_TOKEN','Invalid refresh token');const m=row.user.memberships[0];await prisma.refreshToken.update({where:{id:row.id},data:{revokedAt:new Date()}});const t=tokens(row.userId,m.organizationId,m.role);await prisma.refreshToken.create({data:{userId:row.userId,tokenHash:hashToken(t.refreshToken),expiresAt:new Date(Date.now()+7*86400000)}});res.json(t)}catch(e){next(e)}});
-r.post('/logout',authRateLimit,async(req,res,next)=>{try{const rt=z.object({refreshToken:z.string()}).parse(req.body).refreshToken;await prisma.refreshToken.updateMany({where:{tokenHash:hashToken(rt),revokedAt:null},data:{revokedAt:new Date()}});res.json({message:'Logged out'})}catch(e){next(e)}}); export default r;
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { prisma } from "../../config/database";
+import { access, refresh, verifyRefresh, hashToken } from "../../utils/jwt";
+import { authRateLimit } from "../../middleware/rate";
+import { AppError } from "../../utils/errors";
+const r = Router();
+const creds = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().min(2).optional(),
+  organizationName: z.string().min(2).optional(),
+});
+function tokens(userId: string, organizationId: string, role: any) {
+  return {
+    accessToken: access({ userId, organizationId, role }),
+    refreshToken: refresh(userId),
+  };
+}
+r.post("/register", authRateLimit, async (req, res, next) => {
+  try {
+    const b = creds.parse(req.body);
+    const exists = await prisma.user.findUnique({ where: { email: b.email } });
+    if (exists)
+      throw new AppError(409, "EMAIL_EXISTS", "Email already registered");
+    const pw = await bcrypt.hash(b.password, 12);
+    const result = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          email: b.email,
+          name: b.name ?? b.email.split("@")[0],
+          passwordHash: pw,
+        },
+      });
+      const o = await tx.organization.create({
+        data: { name: b.organizationName ?? `${u.name}'s Organization` },
+      });
+      await tx.orgMember.create({
+        data: { userId: u.id, organizationId: o.id, role: "org_admin" },
+      });
+      return { u, o };
+    });
+    const t = tokens(result.u.id, result.o.id, "org_admin");
+    await prisma.refreshToken.create({
+      data: {
+        userId: result.u.id,
+        tokenHash: hashToken(t.refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 86400000),
+      },
+    });
+    res
+      .status(201)
+      .json({
+        user: { id: result.u.id, email: result.u.email, name: result.u.name },
+        ...t,
+      });
+  } catch (e) {
+    next(e);
+  }
+});
+r.post("/login", authRateLimit, async (req, res, next) => {
+  try {
+    const b = creds.pick({ email: true, password: true }).parse(req.body);
+    const u = await prisma.user.findUnique({
+      where: { email: b.email },
+      include: { memberships: true },
+    });
+    if (!u || !(await bcrypt.compare(b.password, u.passwordHash)))
+      throw new AppError(
+        401,
+        "INVALID_CREDENTIALS",
+        "Invalid email or password",
+      );
+    const m = u.memberships[0];
+    if (!m)
+      throw new AppError(403, "NO_ORGANIZATION", "User has no organization");
+    const t = tokens(u.id, m.organizationId, m.role);
+    await prisma.refreshToken.create({
+      data: {
+        userId: u.id,
+        tokenHash: hashToken(t.refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 86400000),
+      },
+    });
+    res.json({
+      user: {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        organizationId: m.organizationId,
+        role: m.role,
+      },
+      ...t,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+r.post("/refresh", authRateLimit, async (req, res, next) => {
+  try {
+    const rt = z
+      .object({ refreshToken: z.string() })
+      .parse(req.body).refreshToken;
+    const c = verifyRefresh(rt);
+    const row = await prisma.refreshToken.findUnique({
+      where: { tokenHash: hashToken(rt) },
+      include: { user: { include: { memberships: true } } },
+    });
+    if (
+      !row ||
+      row.revokedAt ||
+      row.expiresAt < new Date() ||
+      row.userId !== c.userId
+    )
+      throw new AppError(401, "INVALID_REFRESH_TOKEN", "Invalid refresh token");
+    const m = row.user.memberships[0];
+    await prisma.refreshToken.update({
+      where: { id: row.id },
+      data: { revokedAt: new Date() },
+    });
+    const t = tokens(row.userId, m.organizationId, m.role);
+    await prisma.refreshToken.create({
+      data: {
+        userId: row.userId,
+        tokenHash: hashToken(t.refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 86400000),
+      },
+    });
+    res.json(t);
+  } catch (e) {
+    next(e);
+  }
+});
+r.post("/logout", authRateLimit, async (req, res, next) => {
+  try {
+    const rt = z
+      .object({ refreshToken: z.string() })
+      .parse(req.body).refreshToken;
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash: hashToken(rt), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    res.json({ message: "Logged out" });
+  } catch (e) {
+    next(e);
+  }
+});
+export default r;
