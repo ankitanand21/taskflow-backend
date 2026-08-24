@@ -5,3 +5,4 @@ COPY prisma ./prisma
 RUN npm install
 COPY . .
 RUN npx prisma generate && npm run build
+CMD ["node", "dist/src/server.js"]
