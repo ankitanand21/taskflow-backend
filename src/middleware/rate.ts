@@ -1,0 +1,1 @@
+import rateLimit from 'express-rate-limit'; export const authRateLimit=rateLimit({windowMs:60000,max:10,standardHeaders:true,legacyHeaders:false,message:{error:'Too many authentication requests',code:'RATE_LIMITED',details:{}}});

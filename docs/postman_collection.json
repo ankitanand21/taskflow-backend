@@ -1,0 +1,29 @@
+{
+  "info": { "name": "TaskFlow API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "jobId", "value": "" }
+  ],
+  "item": [
+    { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Register", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"email\": \"new-user@example.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"New User\",\n  \"organizationName\": \"New Organization\"\n}"}, "url": "{{baseUrl}}/auth/register" } },
+    { "name": "Login", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"email\": \"user1@taskflow.dev\",\n  \"password\": \"Password123!\"\n}"}, "url": "{{baseUrl}}/auth/login" } },
+    { "name": "Refresh", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"}, "url": "{{baseUrl}}/auth/refresh" } },
+    { "name": "Logout", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"}, "url": "{{baseUrl}}/auth/logout" } },
+    { "name": "List Members (Admin)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{token}}"}], "url": "{{baseUrl}}/members" } },
+    { "name": "Add Existing Member (Admin)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}], "body":{"mode":"raw","raw":"{\n  \"email\": \"user2@taskflow.dev\",\n  \"role\": \"member\"\n}"}, "url": "{{baseUrl}}/members" } },
+    { "name": "List Projects", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{token}}"}], "url": "{{baseUrl}}/projects?page=1&limit=20" } },
+    { "name": "Create Project", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}], "body":{"mode":"raw","raw":"{\n  \"name\": \"API Test Project\",\n  \"description\": \"Created from Postman\"\n}"}, "url": "{{baseUrl}}/projects" } },
+    { "name": "Project Dashboard", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{token}}"}], "url": "{{baseUrl}}/projects/{{projectId}}/dashboard" } },
+    { "name": "Create Task", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}], "body":{"mode":"raw","raw":"{\n  \"title\": \"Implement API endpoint\",\n  \"description\": \"Test task\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"dueDate\": \"2030-01-01T00:00:00.000Z\"\n}"}, "url": "{{baseUrl}}/projects/{{projectId}}/tasks" } },
+    { "name": "List/Filter Tasks", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{token}}"}], "url": "{{baseUrl}}/projects/{{projectId}}/tasks?page=1&limit=20&status=todo&priority=high" } },
+    { "name": "Assign Task", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}], "body":{"mode":"raw","raw":"{\n  \"userId\": \"{{userId}}\"\n}"}, "url": "{{baseUrl}}/assignments/tasks/{{taskId}}/assign" } },
+    { "name": "Job Status", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{token}}"}], "url": "{{baseUrl}}/jobs/{{jobId}}" } },
+    { "name": "Comments", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}], "body":{"mode":"raw","raw":"{\n  \"body\": \"Task comment\"\n}"}, "url": "{{baseUrl}}/comments/tasks/{{taskId}}/comments" }
+  ]
+}

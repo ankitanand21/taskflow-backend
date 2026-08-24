@@ -1,0 +1,3 @@
+import jwt from 'jsonwebtoken'; import crypto from 'crypto'; import {env} from '../config/env';
+export type Claims={userId:string;organizationId:string;role:string};
+export const access=(c:Claims)=>jwt.sign(c,env.JWT_ACCESS_SECRET,{expiresIn:'15m'}); export const refresh=(userId:string)=>jwt.sign({userId},env.JWT_REFRESH_SECRET,{expiresIn:'7d'}); export const verifyAccess=(t:string)=>jwt.verify(t,env.JWT_ACCESS_SECRET) as Claims; export const verifyRefresh=(t:string)=>jwt.verify(t,env.JWT_REFRESH_SECRET) as {userId:string}; export const hashToken=(t:string)=>crypto.createHash('sha256').update(t).digest('hex');
